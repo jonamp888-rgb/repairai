@@ -744,7 +744,7 @@ function refreshUI(){
   const initials = (u.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('avatar-btn').textContent = initials;
   const hr = new Date().getHours();
-  const greet = hr<12?'Buenos días':hr<18?'Buenas tardes':'Buenas noches';
+  
   document.getElementById('home-greeting').textContent = (hr<12?'Buenos días':hr<18?'Buenas tardes':'Buenas noches')+' '+u.name.split(' ')[0]+' 👋';
   const uses = u.monthlyUses||0;
   const limit = u.plan==='free'?3:999;
