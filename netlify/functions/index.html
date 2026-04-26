@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RepairAI — Estimador Inteligente de Daños</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Epilogue:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07080f;
+  --s1: #0e0f1a;
+  --s2: #161724;
+  --s3: #1e1f30;
+  --border: #252638;
+  --border2: #2e2f45;
+  --accent: #00e5ff;
+  --accent2: #ff6b35;
+  --accent3: #7c3aed;
+  --text: #eeeef5;
+  --muted: #6b6d8a;
+  --muted2: #9395b0;
+  --danger: #ff4757;
+  --success: #00d68f;
+  --warn: #ffb300;
+  --r: 16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Epilogue',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 85% -5%,rgba(0,229,255,.08) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 5% 95%,rgba(255,107,53,.06) 0%,transparent 50%),radial-gradient(ellipse 40% 30% at 50% 50%,rgba(124,58,237,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+/* ── LAYOUT ─────────────────────────────── */
+.app{position:relative;z-index:1;max-width:500px;margin:0 auto;padding:0 18px 100px}
+.screen{display:none;animation:fadeUp .35s ease}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── NAV ─────────────────────────────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 18px}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.5px}
+.logo em{color:var(--accent);font-style:normal}
+.logo small{font-size:10px;font-weight:600;letter-spacing:2px;color:var(--muted);text-transform:uppercase;display:block;margin-top:-2px}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{width:38px;height:38px;background:var(--s1);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:.2s;color:var(--muted2)}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.avatar-btn{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent3),var(--accent));border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:#fff;display:flex;align-items:center;justify-content:center}
+
+/* ── BOTTOM NAV ─────────────────────────── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:rgba(14,15,26,.95);border-top:1px solid var(--border);backdrop-filter:blur(20px);display:flex;z-index:100;padding:8px 0 env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;cursor:pointer;transition:.2s;border:none;background:none;color:var(--muted)}
+.nav-item span{font-size:20px}
+.nav-item label{font-size:10px;font-weight:600;letter-spacing:.5px;cursor:pointer;text-transform:uppercase}
+.nav-item.active{color:var(--accent)}
+.nav-item.active label{color:var(--accent)}
+
+/* ── CARDS ───────────────────────────────── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px}
+.card-accent{border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,229,255,.1),0 8px 40px rgba(0,229,255,.06)}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.top-bar-line{height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:2px;margin-bottom:20px}
+
+/* ── BADGES ──────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.badge-low{background:rgba(0,214,143,.12);color:var(--success)}
+.badge-medium{background:rgba(255,179,0,.12);color:var(--warn)}
+.badge-high{background:rgba(255,71,87,.12);color:var(--danger)}
+.badge-plan{background:rgba(0,229,255,.1);color:var(--accent);border:1px solid rgba(0,229,255,.2)}
+
+/* ── BUTTONS ─────────────────────────────── */
+.btn{width:100%;padding:16px;border-radius:14px;border:none;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-.2px}
+.btn-primary{background:var(--accent);color:#07080f}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,229,255,.3)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:var(--s2);border:1px solid var(--border2);color:var(--text)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);color:var(--danger)}
+.btn-orange{background:var(--accent2);color:#fff}
+.btn-orange:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(255,107,53,.3)}
+.btn-sm{padding:10px 18px;font-size:13px;border-radius:10px;width:auto}
+
+/* ── INPUTS ──────────────────────────────── */
+.input-wrap{margin-bottom:14px}
+.input-wrap label{display:block;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.input-wrap input,.input-wrap textarea,.input-wrap select{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:12px;padding:13px 15px;color:var(--text);font-family:'Epilogue',sans-serif;font-size:14px;outline:none;transition:.2s;-webkit-appearance:none}
+.input-wrap input:focus,.input-wrap textarea:focus,.input-wrap select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.08)}
+.input-wrap select option{background:var(--s2)}
+.input-wrap textarea{resize:vertical;min-height:80px}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── UPLOAD ──────────────────────────────── */
+.upload-zone{border:2px dashed var(--border2);border-radius:18px;padding:32px 20px;text-align:center;cursor:pointer;transition:.3s;background:var(--s1);margin-bottom:14px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(0,229,255,.03)}
+.upload-zone input{display:none}
+.upload-icon-wrap{width:54px;height:54px;background:var(--s2);border-radius:15px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px;transition:.3s}
+.upload-zone:hover .upload-icon-wrap{background:rgba(0,229,255,.1)}
+.upload-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:5px}
+.upload-sub{color:var(--muted);font-size:12px;line-height:1.6}
+
+.preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.prev-item{aspect-ratio:1;border-radius:12px;overflow:hidden;position:relative;background:var(--s2);border:1px solid var(--border)}
+.prev-item img{width:100%;height:100%;object-fit:cover}
+.prev-item .rm{position:absolute;top:5px;right:5px;width:22px;height:22px;background:rgba(0,0,0,.75);border:none;border-radius:50%;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+
+/* ── VEHICLE PILLS ───────────────────────── */
+.pill-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.pill{padding:8px 15px;border-radius:100px;border:1px solid var(--border2);background:var(--s2);color:var(--muted2);font-size:12px;cursor:pointer;transition:.2s;font-family:'Epilogue',sans-serif}
+.pill.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
+
+/* ── MODE TOGGLE ─────────────────────────── */
+.mode-toggle{display:flex;background:var(--s1);border:1px solid var(--border);border-radius:100px;padding:3px;gap:2px;margin-bottom:18px}
+.mode-btn{flex:1;padding:9px;border-radius:100px;border:none;background:transparent;color:var(--muted);font-family:'Epilogue',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.2s;text-align:center}
+.mode-btn.active{background:var(--accent);color:#07080f;font-weight:700}
+
+/* ── COUNTRY ROW ─────────────────────────── */
+.country-row{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:16px}
+.country-flag{font-size:22px;line-height:1}
+.country-select{flex:1;background:transparent;border:none;color:var(--text);font-family:'Epilogue',sans-serif;font-size:13px;cursor:pointer;outline:none}
+.country-select option{background:var(--s2)}
+
+/* ── RESULTS ─────────────────────────────── */
+.cost-hero{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:14px;position:relative;overflow:hidden}
+.cost-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3),var(--accent2))}
+.cost-lbl{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.cost-num{font-family:'Syne',sans-serif;font-weight:800;font-size:38px;letter-spacing:-1.5px;color:var(--accent);line-height:1}
+.cost-sub{font-size:12px;color:var(--muted);margin-top:6px;font-style:italic}
+.cost-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.cost-box{text-align:center;flex:1}
+.cost-box-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.cost-box-val{font-family:'Syne',sans-serif;font-weight:700;font-size:14px}
+
+.breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.breakdown-row:last-child{border-bottom:none}
+.breakdown-lbl{color:var(--muted)}
+.breakdown-val{font-weight:600}
+
+.tag{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--s2);border:1px solid var(--border2);border-radius:100px;font-size:11px;margin:3px}
+.tag-red{border-color:rgba(255,71,87,.3);color:var(--danger);background:rgba(255,71,87,.05)}
+.tag-green{border-color:rgba(0,214,143,.3);color:var(--success);background:rgba(0,214,143,.05)}
+.tag-blue{border-color:rgba(0,229,255,.3);color:var(--accent);background:rgba(0,229,255,.05)}
+
+/* ── HISTORY ─────────────────────────────── */
+.history-item{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;transition:.2s}
+.history-item:hover{border-color:var(--border2);transform:translateY(-1px)}
+.history-item-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.history-item-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px}
+.history-item-date{font-size:11px;color:var(--muted)}
+.history-item-desc{font-size:12px;color:var(--muted2);margin-bottom:10px;line-height:1.5}
+.history-item-bottom{display:flex;justify-content:space-between;align-items:center}
+.history-item-cost{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--accent)}
+
+/* ── PROFILE / PLANS ─────────────────────── */
+.plan-card{border-radius:18px;padding:20px;margin-bottom:12px;border:1px solid var(--border);position:relative;overflow:hidden}
+.plan-card.free{background:var(--s1)}
+.plan-card.pro{background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(124,58,237,.08));border-color:rgba(0,229,255,.25)}
+.plan-card.workshop{background:linear-gradient(135deg,rgba(255,107,53,.08),rgba(255,71,87,.05));border-color:rgba(255,107,53,.25)}
+.plan-name{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px}
+.plan-price{font-size:28px;font-family:'Syne',sans-serif;font-weight:800;margin-bottom:2px}
+.plan-price small{font-size:13px;font-weight:400;color:var(--muted)}
+.plan-features{margin:12px 0;display:flex;flex-direction:column;gap:7px}
+.plan-feature{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted2)}
+.plan-feature.ok{color:var(--text)}
+.plan-feature.ok::before{content:'✓';color:var(--success);font-weight:700;width:16px}
+.plan-feature:not(.ok)::before{content:'✗';color:var(--muted);font-weight:700;width:16px}
+.plan-badge{position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.plan-badge-popular{background:var(--accent);color:#07080f}
+.plan-badge-best{background:var(--accent2);color:#fff}
+
+/* ── STAT CARDS ──────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);margin-bottom:2px}
+.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+
+/* ── LOADER ──────────────────────────────── */
+.loader-screen{display:none;text-align:center;padding:60px 20px}
+.spinner{width:52px;height:52px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-title{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:8px}
+.loader-sub{font-size:13px;color:var(--muted);line-height:1.6}
+.loader-steps{margin-top:20px;display:flex;flex-direction:column;gap:8px;text-align:left}
+.loader-step{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:8px 14px;background:var(--s1);border-radius:10px;border:1px solid var(--border)}
+.loader-step.done{color:var(--success);border-color:rgba(0,214,143,.2)}
+.loader-step.active{color:var(--text);border-color:var(--accent)}
+
+/* ── MISC ────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:16px 0}
+.section-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.tip-box{background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-radius:12px;padding:12px 14px;font-size:12px;color:rgba(0,229,255,.7);margin-bottom:16px;line-height:1.6}
+.err-box{background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--danger);display:none;margin-bottom:14px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state .emo{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:13px;line-height:1.6}
+
+/* ── HERO SECTION ────────────────────────── */
+.hero-greeting{margin-bottom:20px}
+.hero-greeting h2{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.5px;line-height:1.2}
+.hero-greeting p{color:var(--muted2);font-size:13px;margin-top:6px}
+
+/* ── WORKSHOP REPORT ─────────────────────── */
+.report-header{background:linear-gradient(135deg,var(--s1),var(--s2));border:1px solid rgba(255,107,53,.2);border-radius:18px;padding:20px;margin-bottom:14px}
+.report-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent2);margin-bottom:12px}
+.report-info{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.report-field{font-size:12px}
+.report-field span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+
+/* ── AUTH SCREEN ─────────────────────────── */
+.auth-hero{text-align:center;padding:30px 0 24px}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;margin-bottom:8px}
+.auth-logo em{color:var(--accent);font-style:normal}
+.auth-tagline{color:var(--muted2);font-size:14px;line-height:1.6}
+.auth-tabs{display:flex;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:4px;margin-bottom:20px}
+.auth-tab{flex:1;padding:10px;text-align:center;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:.2s;border:none;background:none;font-family:'Epilogue',sans-serif}
+.auth-tab.active{background:var(--s3);color:var(--text)}
+
+/* ── NOTIFICATION DOT ────────────────────── */
+.notif-dot{width:7px;height:7px;background:var(--accent2);border-radius:50%;position:absolute;top:6px;right:6px}
+
+/* ── PROGRESS BAR ────────────────────────── */
+.usage-bar-wrap{margin-bottom:16px}
+.usage-bar-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}
+.usage-bar-top span:first-child{color:var(--muted)}
+.usage-bar{height:6px;background:var(--s3);border-radius:100px;overflow:hidden}
+.usage-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:100px;transition:.5s}
+
+/* ── FLOATING ACTION ─────────────────────── */
+.fab{position:fixed;bottom:80px;right:18px;width:56px;height:56px;background:var(--accent);border:none;border-radius:16px;color:#07080f;font-size:24px;cursor:pointer;box-shadow:0 8px 32px rgba(0,229,255,.3);transition:.2s;z-index:99;display:none;align-items:center;justify-content:center}
+.fab.show{display:flex}
+.fab:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,229,255,.4)}
+
+/* ── CONFIRMATION MODAL ──────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-sheet{background:var(--s1);border:1px solid var(--border);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:500px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px}
+.modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:8px}
+.modal-desc{color:var(--muted2);font-size:13px;line-height:1.6;margin-bottom:20px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+
+.lang-selector{
+  display:flex;align-items:center;gap:6px;
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;padding:6px 12px;cursor:pointer;
+  font-size:12px;color:var(--muted2);position:relative;
+}
+.lang-selector:hover{border-color:var(--accent)}
+.lang-dropdown{
+  position:absolute;top:calc(100% + 6px);right:0;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:12px;padding:6px;min-width:160px;
+  z-index:200;display:none;box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+.lang-dropdown.open{display:block}
+.lang-option{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  border-radius:8px;cursor:pointer;font-size:12px;
+  transition:.15s;
+}
+.lang-option:hover{background:var(--s3)}
+.lang-option.active{color:var(--accent)}
+
+/* ── LANGUAGE SELECTOR ───────────────────────────── */
+.lang-btn{display:flex;align-items:center;gap:5px;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:12px;color:var(--muted2);position:relative;user-select:none}
+.lang-btn:hover{border-color:var(--accent)}
+.lang-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:6px;min-width:180px;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.lang-menu.show{display:block}
+.lang-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--muted2);transition:.15s}
+.lang-opt:hover{background:var(--s3);color:var(--text)}
+.lang-opt.active{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH SCREEN ══════════════════════════════════════════ -->
+<div class="screen active" id="screen-auth" style="max-width:500px;margin:0 auto;padding:0 18px 40px;position:relative;z-index:1">
+  <div style="display:flex;justify-content:flex-end;padding:16px 0 0"><div id="lang-container-auth"></div></div><div style="display:flex;justify-content:flex-end;padding:16px 0 4px"><div id="lang-auth"></div></div><div class="auth-hero">
+    <div class="auth-logo">Repair<em>AI</em></div>
+    <p class="auth-tagline">Estimaciones inteligentes de reparación<br>de carrocería con inteligencia artificial</p>
+  </div>
+
+  <div class="auth-tabs">
+    <button class="auth-tab active" onclick="authTab('login')">Iniciar sesión</button>
+    <button class="auth-tab" onclick="authTab('register')">Crear cuenta</button>
+  </div>
+
+  <div id="auth-login">
+    <div class="input-wrap"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" value="demo@repairai.es"></div>
+    <div class="input-wrap"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" value="demo1234"></div>
+    <button class="btn btn-primary" style="margin-bottom:10px" onclick="doLogin()">🔑 Entrar</button>
+    <button class="btn btn-secondary" onclick="demoLogin()">👀 Ver demo sin registrarse</button>
+  </div>
+
+  <div id="auth-register" style="display:none">
+    <div class="input-row">
+      <div class="input-wrap"><label>Nombre</label><input type="text" id="reg-name" placeholder="Tu nombre"></div>
+      <div class="input-wrap"><label>Apellido</label><input type="text" id="reg-last" placeholder="Apellido"></div>
+    </div>
+    <div class="input-wrap"><label>Email</label><input type="email" id="reg-email" placeholder="tu@email.com"></div>
+    <div class="input-wrap"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="Mínimo 8 caracteres"></div>
+    <div class="input-wrap">
+      <label>Tipo de cuenta</label>
+      <select id="reg-type">
+        <option value="user">👤 Usuario particular</option>
+        <option value="workshop">🔧 Taller / Empresa</option>
+      </select>
+    </div>
+    <div class="input-wrap" id="workshop-name-wrap" style="display:none"><label>Nombre del taller</label><input type="text" id="reg-workshop" placeholder="Taller Mecánico García"></div>
+    <button class="btn btn-primary" onclick="doRegister()">🚀 Crear cuenta gratis</button>
+  </div>
+
+  <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">
+    Al continuar aceptas los <span style="color:var(--accent);cursor:pointer">Términos de uso</span> y la <span style="color:var(--accent);cursor:pointer">Política de privacidad</span>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══════════════════════════════════════════════ -->
+<div id="main-app" style="display:none">
+
+<div class="app">
+  <!-- ─ HOME ───────────────────────────────── -->
+  <div class="screen active" id="screen-home">
+    <div class="topbar">
+      <div class="logo">Repair<em>AI</em><small id="home-plan-label">Plan Gratis</small></div>
+      <div id="lang-container-main" style="margin-right:4px"></div>
+      <div id="lang-main" style="margin-right:4px"></div><div class="topbar-actions">
+        <div class="icon-btn" onclick="navigate('notifications')" style="position:relative">🔔<div class="notif-dot"></div></div>
+        <div class="avatar-btn" onclick="navigate('profile')" id="avatar-btn">?</div>
+      </div>
+    </div>
+
+    <div class="hero-greeting">
+      <h2 id="home-greeting">Buenos días 👋</h2>
+      <p id="home-subtext">¿Tienes un golpe? Analízalo en segundos.</p>
+    </div>
+
+    <!-- Usage bar -->
+    <div class="usage-bar-wrap" id="usage-bar-wrap">
+      <div class="usage-bar-top">
+        <span id="usage-text">Análisis este mes</span>
+        <span id="usage-count" style="font-weight:600;color:var(--accent)">0/3</span>
+      </div>
+      <div class="usage-bar"><div class="usage-fill" id="usage-fill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Quick action card -->
+    <div class="card card-accent" style="cursor:pointer" onclick="navigate('analyze')">
+      <div class="top-bar-line"></div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:52px;height:52px;background:rgba(0,229,255,.1);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">📷</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:3px">Nuevo análisis</div>
+          <div style="font-size:12px;color:var(--muted2)">Sube fotos del daño y obtén una estimación en segundos</div>
+        </div>
+        <div style="margin-left:auto;color:var(--muted);font-size:20px">›</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="home-stats">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total">0</div>
+        <div class="stat-lbl">Análisis realizados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-saved">—</div>
+        <div class="stat-lbl">Último ahorro estimado</div>
+      </div>
+    </div>
+
+    <!-- Recent analyses -->
+    <div class="section-lbl">Últimos análisis</div>
+    <div id="home-recent"></div>
+
+    <!-- Workshop promo -->
+    <div class="card" style="background:linear-gradient(135deg,rgba(255,107,53,.07),rgba(255,71,87,.05));border-color:rgba(255,107,53,.2);cursor:pointer" onclick="navigate('plans')">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:28px">🔧</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:3px">¿Eres taller?</div>
+          <div style="font-size:12px;color:var(--muted2)">Informes PDF, gestión de clientes y análisis ilimitados</div>
+        </div>
+        <div style="margin-left:auto;color:var(--accent2);font-size:11px;font-weight:700;white-space:nowrap">Ver planes →</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─ ANALYZE ─────────────────────────────── -->
+  <div class="screen" id="screen-analyze">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('home')">
+        <span style="font-size:20px;color:var(--muted)">‹</span>
+        <div class="logo">Repair<em>AI</em></div>
+      </div>
+      <div class="topbar-actions">
+        <div class="icon-btn" onclick="navigate('profile')">⚙️</div>
+      </div>
+    </div>
+
+    <div class="section-lbl" style="margin-bottom:4px">Modo</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" onclick="setMode('user',this)">👤 Usuario</button>
+      <button class="mode-btn" onclick="setMode('workshop',this)">🔧 Taller</button>
+    </div>
+
+    <!-- Workshop fields -->
+    <div class="workshop-only" style="display:none">
+      <div class="input-row">
+        <div class="input-wrap"><label>Nombre del cliente</label><input type="text" id="w-client" placeholder="Juan García"></div>
+        <div class="input-wrap"><label>Matrícula</label><input type="text" id="w-plate" placeholder="1234 ABC"></div>
+      </div>
+    </div>
+
+    <div class="country-row">
+      <span class="country-flag" id="flag">🇪🇸</span>
+      <select class="country-select" id="country" onchange="updateFlag()">
+        <option value="ES">España (€)</option>
+        <option value="MX">México (MXN)</option>
+        <option value="AR">Argentina (ARS)</option>
+        <option value="CO">Colombia (COP)</option>
+        <option value="CL">Chile (CLP)</option>
+        <option value="PE">Perú (S/)</option>
+        <option value="US">Estados Unidos ($)</option>
+        <option value="DE">Alemania (€)</option>
+        <option value="FR">Francia (€)</option>
+        <option value="GB">Reino Unido (£)</option>
+        <option value="BR">Brasil (R$)</option>
+        <option value="IT">Italia (€)</option>
+        <option value="PT">Portugal (€)</option>
+      </select>
+    </div>
+
+    <div class="tip-box">📸 <strong>Mejor resultado:</strong> Sube 2-4 fotos desde ángulos distintos. Una foto general del vehículo y otra de cerca del daño dan resultados más precisos.</div>
+
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-in').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="dropFiles(event)">
+      <input type="file" id="file-in" accept="image/*" multiple onchange="addFiles(this.files)">
+      <div class="upload-icon-wrap">📷</div>
+      <div class="upload-title">Sube fotos del daño</div>
+      <div class="upload-sub">Toca aquí o arrastra las imágenes<br>JPG, PNG · Hasta 5 fotos</div>
+    </div>
+    <div class="preview-grid" id="prev-grid"></div>
+
+    <div class="section-lbl">Tipo de vehículo</div>
+    <div class="pill-row">
+      <div class="pill active" onclick="setVType(this,'turismo')">🚗 Turismo</div>
+      <div class="pill" onclick="setVType(this,'SUV/4x4')">🚙 SUV</div>
+      <div class="pill" onclick="setVType(this,'furgoneta')">🚐 Furgoneta</div>
+      <div class="pill" onclick="setVType(this,'moto')">🏍️ Moto</div>
+      <div class="pill" onclick="setVType(this,'camión')">🚛 Camión</div>
+      <div class="pill" onclick="setVType(this,'deportivo')">🏎️ Deportivo</div>
+    </div>
+
+    <!-- Workshop notes -->
+    <div class="workshop-only" style="display:none">
+      <div class="input-wrap"><label>Observaciones técnicas</label><textarea id="w-notes" placeholder="Descripción del daño, piezas identificadas, referencias..."></textarea></div>
+    </div>
+
+    <div class="err-box" id="err-box"></div>
+
+    <button class="btn btn-primary" id="analyze-btn" onclick="runAnalysis()" disabled>
+      🔍 Analizar daño con IA
+    </button>
+  </div>
+
+  <!-- ─ LOADER ──────────────────────────────── -->
+  <div class="loader-screen" id="screen-loader">
+    <div class="spinner"></div>
+    <div class="loader-title">Analizando el daño...</div>
+    <div class="loader-sub">La IA está evaluando las imágenes.<br>Esto tarda entre 10 y 20 segundos.</div>
+    <div class="loader-steps">
+      <div class="loader-step active" id="ls1">🔍 Detectando zonas dañadas...</div>
+      <div class="loader-step" id="ls2">📐 Midiendo extensión del daño...</div>
+      <div class="loader-step" id="ls3">🏷️ Identificando piezas afectadas...</div>
+      <div class="loader-step" id="ls4">💰 Calculando costes de reparación...</div>
+      <div class="loader-step" id="ls5">📋 Generando informe completo...</div>
+    </div>
+  </div>
+
+  <!-- ─ RESULTS ─────────────────────────────── -->
+  <div class="screen" id="screen-results">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('analyze')">
+        <span style="font-size:20px;color:var(--muted)">‹</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700">Resultado</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="icon-btn" onclick="shareResult()">📤</div>
+        <div class="icon-btn workshop-only" onclick="downloadPDF()" style="display:none">📄</div>
+      </div>
+    </div>
+    <div id="result-body"></div>
+    <button class="btn btn-secondary" onclick="newAnalysis()" style="margin-top:4px">+ Nuevo análisis</button>
+  </div>
+
+  <!-- ─ HISTORY ─────────────────────────────── -->
+  <div class="screen" id="screen-history">
+    <div class="topbar">
+      <div class="logo">Repair<em>AI</em><small>Historial</small></div>
+      <div class="icon-btn" onclick="clearHistory()">🗑️</div>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ─ PLANS ──────────────────────────────────  -->
+  <div class="screen" id="screen-plans">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('home')">
+        <span style="font-size:20px;color:var(--muted)">‹</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700">Planes y precios</span>
+      </div>
+    </div>
+
+    <div class="plan-card free">
+      <div class="plan-name">Gratis</div>
+      <div class="plan-price">0€ <small>/ mes</small></div>
+      <div class="plan-features">
+        <div class="plan-feature ok">3 análisis al mes</div>
+        <div class="plan-feature ok">Estimación básica de costes</div>
+        <div class="plan-feature ok">Historial de análisis</div>
+        <div class="plan-feature">Sin informes PDF</div>
+        <div class="plan-feature">Sin modo taller</div>
+        <div class="plan-feature">Sin análisis ilimitados</div>
+      </div>
+      <button class="btn btn-secondary" disabled>Plan actual</button>
+    </div>
+
+    <div class="plan-card pro">
+      <div class="plan-badge plan-badge-popular">⭐ Popular</div>
+      <div class="plan-name" style="color:var(--accent)">Pro</div>
+      <div class="plan-price" style="color:var(--accent)">4,99€ <small>/ mes</small></div>
+      <div class="plan-features">
+        <div class="plan-feature ok">Análisis ilimitados</div>
+        <div class="plan-feature ok">Estimaciones detalladas</div>
+        <div class="plan-feature ok">Historial completo</div>
+        <div class="plan-feature ok">Exportar a PDF</div>
+        <div class="plan-feature ok">Prioridad en análisis</div>
+        <div class="plan-feature">Sin gestión de clientes</div>
+      </div>
+      <button class="btn btn-primary" onclick="showPayModal('pro')">Activar Pro — 4,99€/mes</button>
+    </div>
+
+    <div class="plan-card workshop">
+      <div class="plan-badge plan-badge-best">🔧 Talleres</div>
+      <div class="plan-name" style="color:var(--accent2)">Taller</div>
+      <div class="plan-price" style="color:var(--accent2)">14,99€ <small>/ mes</small></div>
+      <div class="plan-features">
+        <div class="plan-feature ok">Todo lo del plan Pro</div>
+        <div class="plan-feature ok">Informes PDF con logo del taller</div>
+        <div class="plan-feature ok">Gestión de clientes y vehículos</div>
+        <div class="plan-feature ok">Múltiples usuarios del taller</div>
+        <div class="plan-feature ok">Integración con presupuestos</div>
+        <div class="plan-feature ok">Soporte prioritario</div>
+      </div>
+      <button class="btn btn-orange" onclick="showPayModal('workshop')">Activar Taller — 14,99€/mes</button>
+    </div>
+
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;line-height:1.7">
+      Cancela cuando quieras · Pago seguro con Stripe<br>Los precios incluyen IVA
+    </div>
+  </div>
+
+  <!-- ─ PROFILE ─────────────────────────────── -->
+  <div class="screen" id="screen-profile">
+    <div class="topbar">
+      <div class="logo">Repair<em>AI</em><small>Mi cuenta</small></div>
+      <div class="icon-btn" onclick="doLogout()">🚪</div>
+    </div>
+
+    <div class="card" style="text-align:center;padding:28px">
+      <div style="width:72px;height:72px;background:linear-gradient(135deg,var(--accent3),var(--accent));border-radius:20px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:#fff;margin:0 auto 14px" id="profile-avatar">?</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px" id="profile-name">—</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px" id="profile-email">—</div>
+      <span class="badge badge-plan" id="profile-plan-badge">Plan Gratis</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="p-stat-total">0</div><div class="stat-lbl">Análisis totales</div></div>
+      <div class="stat-card"><div class="stat-num" id="p-stat-month">0</div><div class="stat-lbl">Este mes</div></div>
+    </div>
+
+    <div class="usage-bar-wrap">
+      <div class="usage-bar-top">
+        <span>Análisis usados este mes</span>
+        <span id="p-usage-count" style="font-weight:600;color:var(--accent)">0 / 3</span>
+      </div>
+      <div class="usage-bar"><div class="usage-fill" id="p-usage-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚙️ Configuración</div>
+      <div class="input-wrap"><label>Nombre</label><input type="text" id="cfg-name" placeholder="Tu nombre"></div>
+      <div class="input-wrap"><label>Email</label><input type="email" id="cfg-email" placeholder="tu@email.com"></div>
+      <div class="input-wrap"><label>País por defecto</label>
+        <select id="cfg-country">
+          <option value="ES">🇪🇸 España</option>
+          <option value="MX">🇲🇽 México</option>
+          <option value="AR">🇦🇷 Argentina</option>
+          <option value="CO">🇨🇴 Colombia</option>
+          <option value="US">🇺🇸 EE.UU.</option>
+          <option value="GB">🇬🇧 Reino Unido</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveProfile()" style="width:auto;margin-top:4px">Guardar cambios</button>
+    </div>
+
+    <div class="card" style="cursor:pointer" onclick="navigate('plans')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:3px">Mejorar plan</div>
+          <div style="font-size:12px;color:var(--muted2)">Análisis ilimitados, PDF y más</div>
+        </div>
+        <span style="color:var(--accent);font-size:11px;font-weight:700">Ver →</span>
+      </div>
+    </div>
+
+    <button class="btn btn-danger" onclick="doLogout()" style="margin-top:4px">🚪 Cerrar sesión</button>
+  </div>
+
+</div><!-- /.app -->
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="navigate('home')"><span>🏠</span><label>Inicio</label></button>
+  <button class="nav-item" id="nav-analyze" onclick="navigate('analyze')"><span>📷</span><label>Analizar</label></button>
+  <button class="nav-item" id="nav-history" onclick="navigate('history')"><span>📋</span><label>Historial</label></button>
+  <button class="nav-item" id="nav-profile" onclick="navigate('profile')"><span>👤</span><label>Cuenta</label></button>
+</nav>
+
+</div><!-- /#main-app -->
+
+<!-- ══ PAYMENT MODAL ═════════════════════════════════════════ -->
+<div class="modal-overlay" id="pay-modal" onclick="closeModal()">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Activar Plan Pro</div>
+    <div class="modal-desc" id="modal-desc">Accede a análisis ilimitados, exportación PDF y más funciones avanzadas.</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">💳 Datos de pago</div>
+      <div class="input-wrap"><label>Número de tarjeta</label><input type="text" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)"></div>
+      <div class="input-row">
+        <div class="input-wrap"><label>Caducidad</label><input type="text" placeholder="MM/AA" maxlength="5"></div>
+        <div class="input-wrap"><label>CVV</label><input type="text" placeholder="123" maxlength="3"></div>
+      </div>
+      <div class="input-wrap"><label>Nombre en la tarjeta</label><input type="text" placeholder="JUAN GARCIA"></div>
+    </div>
+    <button class="btn btn-primary" id="pay-btn" onclick="simulatePay()">🔒 Pagar de forma segura</button>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:10px">🔐 Pago cifrado con Stripe · Cancela cuando quieras</div>
+  </div>
+</div>
+
+<!-- ══ SUCCESS MODAL ═════════════════════════════════════════ -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-sheet" style="text-align:center">
+    <div class="modal-handle"></div>
+    <div style="font-size:52px;margin-bottom:12px">🎉</div>
+    <div class="modal-title">¡Plan activado!</div>
+    <div class="modal-desc" id="success-desc">Ya tienes acceso a todas las funciones de tu nuevo plan.</div>
+    <button class="btn btn-primary" onclick="closeSuccessModal()">Perfecto, ¡vamos!</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA & STATE
+// ═══════════════════════════════════════════════════════
+const COUNTRIES = {
+  ES:{flag:'🇪🇸',cur:'€',sym:'EUR',f:1,name:'España'},
+  MX:{flag:'🇲🇽',cur:'MXN',sym:'MXN',f:20.5,name:'México'},
+  AR:{flag:'🇦🇷',cur:'ARS',sym:'ARS',f:1050,name:'Argentina'},
+  CO:{flag:'🇨🇴',cur:'COP',sym:'COP',f:4500,name:'Colombia'},
+  CL:{flag:'🇨🇱',cur:'CLP',sym:'CLP',f:990,name:'Chile'},
+  PE:{flag:'🇵🇪',cur:'S/',sym:'PEN',f:3.9,name:'Perú'},
+  US:{flag:'🇺🇸',cur:'$',sym:'USD',f:1.08,name:'EE.UU.'},
+  DE:{flag:'🇩🇪',cur:'€',sym:'EUR',f:1.1,name:'Alemania'},
+  FR:{flag:'🇫🇷',cur:'€',sym:'EUR',f:1.05,name:'Francia'},
+  GB:{flag:'🇬🇧',cur:'£',sym:'GBP',f:0.88,name:'R.Unido'},
+  BR:{flag:'🇧🇷',cur:'R$',sym:'BRL',f:5.6,name:'Brasil'},
+  IT:{flag:'🇮🇹',cur:'€',sym:'EUR',f:1.02,name:'Italia'},
+  PT:{flag:'🇵🇹',cur:'€',sym:'EUR',f:0.95,name:'Portugal'},
+};
+
+let state = {
+  user: null,
+  mode: 'user',
+  vtype: 'turismo',
+  files: [],
+  history: JSON.parse(localStorage.getItem('rai_history')||'[]'),
+  currentResult: null,
+  pendingPlan: null,
+};
+
+// ═══════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════
+document.getElementById('reg-type').addEventListener('change', function(){
+  document.getElementById('workshop-name-wrap').style.display = this.value==='workshop'?'block':'none';
+});
+
+function authTab(tab){
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('auth-login').style.display = tab==='login'?'block':'none';
+  document.getElementById('auth-register').style.display = tab==='register'?'block':'none';
+}
+
+function doLogin(){
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-pass').value;
+  if(!email||!pass){alert('Completa todos los campos');return;}
+  const saved = JSON.parse(localStorage.getItem('rai_user')||'null');
+  if(saved && saved.email===email){
+    loginUser(saved);
+  } else {
+    loginUser({name:'Usuario',email:email,plan:'free',monthlyUses:0,totalUses:0});
+  }
+}
+
+function doRegister(){
+  const name = document.getElementById('reg-name').value;
+  const email = document.getElementById('reg-email').value;
+  const pass = document.getElementById('reg-pass').value;
+  const type = document.getElementById('reg-type').value;
+  const workshop = document.getElementById('reg-workshop').value;
+  if(!name||!email||!pass){alert('Completa todos los campos');return;}
+  const user = {name,email,type,workshop,plan:'free',monthlyUses:0,totalUses:0};
+  localStorage.setItem('rai_user', JSON.stringify(user));
+  loginUser(user);
+}
+
+function demoLogin(){
+  loginUser({name:'Demo User',email:'demo@repairai.es',plan:'free',monthlyUses:1,totalUses:5});
+}
+
+function loginUser(user){
+  state.user = user;
+  document.getElementById('screen-auth').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  refreshUI();
+  navigate('home');
+}
+
+function doLogout(){
+  state.user=null;
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('screen-auth').style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function navigate(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(screen==='loader'){
+    document.getElementById('screen-loader').style.display='block';
+    return;
+  }
+  const s = document.getElementById('screen-'+screen);
+  if(s){s.classList.add('active');s.style.display='';}
+  const n = document.getElementById('nav-'+screen);
+  if(n) n.classList.add('active');
+  if(screen==='history') renderHistory();
+  if(screen==='profile') renderProfile();
+}
+
+// ═══════════════════════════════════════════════════════
+// REFRESH UI
+// ═══════════════════════════════════════════════════════
+function refreshUI(){
+  const u = state.user; if(!u) return;
+  const initials = (u.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatar-btn').textContent = initials;
+  const hr = new Date().getHours();
+  const greet = hr<12?'Buenos días':hr<18?'Buenas tardes':'Buenas noches';
+  document.getElementById('home-greeting').textContent = (hr<12?'Buenos días':hr<18?'Buenas tardes':'Buenas noches')+' '+u.name.split(' ')[0]+' 👋';
+  const uses = u.monthlyUses||0;
+  const limit = u.plan==='free'?3:999;
+  const pct = u.plan==='free'?Math.min(100,(uses/3)*100):0;
+  document.getElementById('usage-fill').style.width = pct+'%';
+  document.getElementById('usage-count').textContent = u.plan==='free'?(uses+'/3'):'∞';
+  document.getElementById('usage-text').textContent = u.plan==='free'?'Análisis este mes':'Plan '+u.plan;
+  document.getElementById('home-plan-label').textContent = {free:'Plan Gratis',pro:'Plan Pro',workshop:'Plan Taller'}[u.plan]||'Plan Gratis';
+  document.getElementById('stat-total').textContent = u.totalUses||0;
+  const lastH = state.history[0];
+  document.getElementById('stat-saved').textContent = lastH ? fmtCur(lastH.result.minCostEUR,COUNTRIES[lastH.country]||COUNTRIES.ES) : '—';
+  renderHomeRecent();
+}
+
+function renderHomeRecent(){
+  const el = document.getElementById('home-recent');
+  if(!state.history.length){
+    el.innerHTML='<div class="empty-state"><div class="emo">🔍</div><p>Aún no tienes análisis.<br>¡Haz tu primero ahora!</p></div>';
+    return;
+  }
+  el.innerHTML = state.history.slice(0,3).map(h=>historyItemHTML(h)).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// ANALYZE SCREEN
+// ═══════════════════════════════════════════════════════
+function setMode(mode, btn){
+  state.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const wEls = document.querySelectorAll('.workshop-only');
+  wEls.forEach(el=>{el.style.display=mode==='workshop'?'block':'none'});
+  const pdfBtn = document.querySelector('.workshop-only.icon-btn');
+  if(pdfBtn) pdfBtn.style.display = mode==='workshop'?'flex':'none';
+}
+
+function setVType(el, type){
+  state.vtype = type;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function updateFlag(){
+  const code = document.getElementById('country').value;
+  document.getElementById('flag').textContent = (COUNTRIES[code]||COUNTRIES.ES).flag;
+}
+
+function addFiles(files){
+  const arr = Array.from(files);
+  state.files = [...state.files,...arr].slice(0,5);
+  renderPreviews();
+  document.getElementById('analyze-btn').disabled = state.files.length===0;
+}
+
+function dropFiles(e){
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  addFiles(e.dataTransfer.files);
+}
+
+function renderPreviews(){
+  const g = document.getElementById('prev-grid');
+  g.innerHTML = state.files.map((f,i)=>`
+    <div class="prev-item">
+      <img src="${URL.createObjectURL(f)}">
+      <button class="rm" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeFile(i){
+  state.files.splice(i,1);
+  renderPreviews();
+  document.getElementById('analyze-btn').disabled = state.files.length===0;
+}
+
+// ═══════════════════════════════════════════════════════
+// ANALYSIS
+// ═══════════════════════════════════════════════════════
+async function runAnalysis(){
+  if(!state.files.length) return;
+  const u = state.user;
+  if(u.plan==='free' && (u.monthlyUses||0)>=3){
+    showPayModal('pro'); return;
+  }
+  // Hide analyze screen, show loader
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const ld = document.getElementById('screen-loader');
+  ld.style.display='flex';
+  ld.style.flexDirection='column';
+  ld.style.alignItems='center';
+  ld.style.justifyContent='center';
+  ld.style.minHeight='100vh';
+
+  // Loader animation
+  const steps=['ls1','ls2','ls3','ls4','ls5'];
+  let si=0;
+  const stepIntvl = setInterval(()=>{
+    if(si>0) {document.getElementById(steps[si-1]).classList.remove('active');document.getElementById(steps[si-1]).classList.add('done');}
+    if(si<steps.length){document.getElementById(steps[si]).classList.add('active');si++;}
+  },3000);
+
+  try {
+    const countryCode = document.getElementById('country').value;
+    const country = COUNTRIES[countryCode]||COUNTRIES.ES;
+    const isWorkshop = state.mode==='workshop';
+    const client = isWorkshop ? document.getElementById('w-client').value:'';
+    const plate = isWorkshop ? document.getElementById('w-plate').value:'';
+    const notes = isWorkshop ? document.getElementById('w-notes').value:'';
+
+    const imageBlocks = await Promise.all(state.files.map(async f=>({
+      type:'image',
+      source:{type:'base64',media_type:f.type||'image/jpeg',data:await toB64(f)}
+    })));
+
+    const prompt = `Eres un mecánico experto en chapa y pintura con 20 años de experiencia en talleres multimarca españoles. Analiza el daño visible en las fotos y da una estimación MUY PRECISA basada en precios reales contrastados de múltiples talleres españoles en 2025.
+
+TABLA DE PRECIOS REALES verificados en talleres españoles 2025 (Paint Center Madrid, TallersGZ, Garygar Zaragoza, Leomotor, Criticauto):
+
+MANO DE OBRA:
+- Taller multimarca: 35-55€/hora (media 40€/hora)
+- Tiempo montar/desmontar paragolpes: 1-1.5h
+- Tiempo pintar pieza pequeña: 1.5-2h
+
+PARAGOLPES (pieza más común):
+- Solo arañazo superficial spot repair: 50-150€
+- Pintar paragolpes completo sin daño: 100-200€
+- Reparar golpe leve + pintar: 150-300€
+- Reparar golpe moderado + pintar: 250-400€
+- Sustituir por pieza genérica + pintar: 250-450€
+- Sustituir por pieza original + pintar: 400-700€
+
+PUERTAS:
+- Pintar puerta (arañazos leves): 90-200€
+- Reparar abolladura pequeña + pintar: 150-300€
+- Reparar abolladura grande + pintar: 300-600€
+- Abolladura SMART repair sin pintar: 40-100€
+
+ALETAS:
+- Aleta delantera pintar: 75-150€
+- Aleta trasera pintar: 95-160€
+- Aleta con abolladura reparar + pintar: 150-300€
+
+CAPÓ Y TECHO:
+- Capó pintar: 130-300€
+- Capó reparar abolladura + pintar: 200-450€
+- Techo pintar: 150-300€
+
+OTROS:
+- Portón trasero pintar: 130-250€
+- Retrovisor sustituir: 45-200€
+- Aleta + puerta (2 piezas): 250-550€
+- Daño múltiples piezas (3+): 500-1200€
+- Daño estructural grave: 800-3000€
+
+FACTORES QUE SUBEN EL PRECIO:
+- Pintura metalizada o perlada: +20-30%
+- Vehículo premium/lujo: +30-50%
+- Colores especiales: +15-25%
+- Zona de Madrid capital: +20-30% sobre media nacional
+
+REGLAS CRÍTICAS:
+1. Un golpe típico de aparcamiento en paragolpes: 150-350€
+2. Un arañazo en puerta: 90-200€
+3. NO superes 600€ salvo daño grave en múltiples piezas o estructural
+4. Usa siempre piezas genéricas de calidad como referencia base
+5. Sé conservador: mejor quedarse corto que pasarse Referencia de precios en España: arañazo superficial 80-200€, golpe pequeño paragolpes reparable 150-350€, paragolpes a sustituir 200-500€, abolladura puerta pequeña 200-450€, pintura panel 200-400€. La mayoría de golpes cotidianos cuestan entre 100€ y 800€. Solo supera 1000€ si hay daño estructural grave en múltiples paneles. Analiza ${state.files.length>1?'estas '+state.files.length+' fotos':'esta foto'} de daños en un "${state.vtype}".
+
+PAÍS: ${country.name} (${country.sym})
+MODO: ${isWorkshop?'Taller profesional':'Usuario particular'}
+${notes?'NOTAS DEL TALLER: '+notes:''}
+
+Responde ÚNICAMENTE con JSON válido sin texto extra:
+{
+  "severity": "low|medium|high",
+  "severityLabel": "Leve|Moderado|Grave",
+  "damageType": "tipo de daño en pocas palabras",
+  "damageDescription": "descripción clara en 2-3 frases dirigida a ${isWorkshop?'un mecánico':'un propietario de vehículo'}",
+  "affectedParts": ["parte1","parte2"],
+  "minCostEUR": número,
+  "maxCostEUR": número,
+  "laborHours": número,
+  "paintHours": número,
+  "canBeRepaired": true|false,
+  "needsReplacement": ["pieza1"],
+  "repairSteps": ["paso técnico 1","paso técnico 2","paso técnico 3"],
+  "timeEstimateDays": "1-2|2-5|5-10",
+  "tips": ["consejo 1","consejo 2"],
+  "insuranceRecommended": true|false,
+  "confidenceLevel": "alta|media|baja",
+  "disclaimer": "Nota breve de limitación"
+}
+
+IMPORTANTE: minCostEUR y maxCostEUR deben estar dentro de los rangos reales de la tabla. Si el daño parece leve (arañazo, golpe pequeño), el máximo no debe superar 400€. Adapta los precios según el país seleccionado multiplicando por el factor de coste de vida local. España = base 1.0, México = 0.6, Argentina = 0.4, EE.UU. = 1.3, Alemania = 1.2, Reino Unido = 1.15.`;
+
+    const resp = await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:1000,
+        messages:[{role:'user',content:[...imageBlocks,{type:'text',text:prompt}]}]
+      })
+    });
+    clearInterval(stepIntvl);
+    steps.forEach(s=>{document.getElementById(s).classList.remove('active');document.getElementById(s).classList.add('done');});
+
+    const data = await resp.json();
+    const txt = data.content.map(i=>i.text||'').join('');
+    const clean = txt.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(clean);
+
+    // Save to history
+    const entry = {
+      id: Date.now(),
+      date: new Date().toLocaleDateString('es-ES'),
+      country: countryCode,
+      vtype: state.vtype,
+      mode: state.mode,
+      client, plate,
+      result,
+      images: state.files.length,
+    };
+    state.history.unshift(entry);
+    if(state.history.length>50) state.history.pop();
+    localStorage.setItem('rai_history', JSON.stringify(state.history));
+    state.currentResult = entry;
+
+    // Update usage
+    u.monthlyUses = (u.monthlyUses||0)+1;
+    u.totalUses = (u.totalUses||0)+1;
+    localStorage.setItem('rai_user', JSON.stringify(u));
+
+    ld.style.display='none';
+    showResults(entry, country);
+
+  } catch(err){
+    clearInterval(stepIntvl);
+    ld.style.display='none';
+    navigate('analyze');
+    const eb = document.getElementById('err-box');
+    eb.style.display='block';
+    eb.textContent='⚠️ Error al analizar. Comprueba tu conexión e inténtalo de nuevo.';
+    console.error(err);
+  }
+}
+
+async function toB64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// RESULTS RENDER
+// ═══════════════════════════════════════════════════════
+function fmtCur(eur, country){
+  const amt = Math.round(eur*(country.f||1));
+  return country.cur+' '+amt.toLocaleString('es-ES');
+}
+
+function showResults(entry, country){
+  const r = entry.result;
+  const isW = entry.mode==='workshop';
+  const sevClass = {low:'badge-low',medium:'badge-medium',high:'badge-high'}[r.severity]||'badge-medium';
+  const minF = fmtCur(r.minCostEUR, country);
+  const maxF = fmtCur(r.maxCostEUR, country);
+  const midEUR = Math.round((r.minCostEUR+r.maxCostEUR)/2);
+  const midF = fmtCur(midEUR, country);
+  const laborCostEUR = Math.round(r.laborHours*45);
+  const paintCostEUR = Math.round((r.paintHours||0)*55);
+  const partsCostEUR = Math.max(0, midEUR - laborCostEUR - paintCostEUR);
+
+  const workshopHeader = isW && (entry.client||entry.plate) ? `
+    <div class="report-header">
+      <div class="report-logo">🔧 Informe de taller</div>
+      <div class="report-info">
+        ${entry.client?`<div class="report-field"><span>Cliente</span>${entry.client}</div>`:''}
+        ${entry.plate?`<div class="report-field"><span>Matrícula</span>${entry.plate}</div>`:''}
+        <div class="report-field"><span>Fecha</span>${entry.date}</div>
+        <div class="report-field"><span>Tipo</span>${entry.vtype}</div>
+      </div>
+    </div>` : '';
+
+  const stepsHTML = r.repairSteps.map((s,i)=>`
+    <div class="breakdown-row">
+      <span class="breakdown-lbl" style="display:flex;gap:8px;align-items:center"><span style="width:20px;height:20px;background:var(--s3);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</span>${s}</span>
+    </div>`).join('');
+
+  const workshopBreakdown = isW ? `
+    <div class="card">
+      <div class="card-title">📊 Desglose técnico</div>
+      <div class="breakdown-row"><span class="breakdown-lbl">Mano de obra</span><span class="breakdown-val">${r.laborHours}h · ${fmtCur(laborCostEUR,country)}</span></div>
+      <div class="breakdown-row"><span class="breakdown-lbl">Pintura y acabados</span><span class="breakdown-val">${r.paintHours||0}h · ${fmtCur(paintCostEUR,country)}</span></div>
+      <div class="breakdown-row"><span class="breakdown-lbl">Materiales y piezas</span><span class="breakdown-val">${fmtCur(partsCostEUR,country)}</span></div>
+      <div class="breakdown-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:12px">
+        <span class="breakdown-lbl" style="font-weight:700;color:var(--text)">Total estimado</span>
+        <span class="breakdown-val" style="color:var(--accent)">${minF} – ${maxF}</span>
+      </div>
+    </div>` : '';
+
+  const html = `
+    ${workshopHeader}
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px">${r.damageType||'Daño detectado'}</div>
+      <span class="badge ${sevClass}">${r.severityLabel}</span>
+    </div>
+
+    <div class="cost-hero">
+      <div class="cost-lbl">Coste estimado · ${(COUNTRIES[entry.country]||COUNTRIES.ES).name}</div>
+      <div class="cost-num">${minF} – ${maxF}</div>
+      <div class="cost-sub">Estimación basada en precios de mercado locales</div>
+      <div class="cost-row">
+        <div class="cost-box"><div class="cost-box-lbl">Mínimo</div><div class="cost-box-val">${minF}</div></div>
+        <div style="width:1px;background:var(--border);align-self:stretch"></div>
+        <div class="cost-box"><div class="cost-box-lbl">Estimado</div><div class="cost-box-val" style="color:var(--accent)">${midF}</div></div>
+        <div style="width:1px;background:var(--border);align-self:stretch"></div>
+        <div class="cost-box"><div class="cost-box-lbl">Máximo</div><div class="cost-box-val">${maxF}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔍 Descripción del daño</div>
+      <p style="font-size:13px;line-height:1.7;color:var(--muted2)">${r.damageDescription}</p>
+      <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+        <div class="breakdown-row" style="width:100%;border:none;padding:0;margin-top:4px">
+          <span class="breakdown-lbl">Tiempo estimado</span>
+          <span class="breakdown-val">📅 ${r.timeEstimateDays} días</span>
+        </div>
+        <div class="breakdown-row" style="width:100%;border:none;padding:0">
+          <span class="breakdown-lbl">¿Reparable?</span>
+          <span class="breakdown-val" style="color:${r.canBeRepaired?'var(--success)':'var(--danger)'}">${r.canBeRepaired?'✅ Sí':'⚠️ Valorar sustitución'}</span>
+        </div>
+        ${r.insuranceRecommended?'<div class="breakdown-row" style="width:100%;border:none;padding:0"><span class="breakdown-lbl">Seguro</span><span class="breakdown-val">🛡️ Recomendado reclamar</span></div>':''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔧 Piezas afectadas</div>
+      <div>${r.affectedParts.map(p=>`<span class="tag tag-blue">🔩 ${p}</span>`).join('')}</div>
+      ${r.needsReplacement.length?`<div style="margin-top:10px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px;font-weight:600">Necesitan reemplazo</div><div>${r.needsReplacement.map(p=>`<span class="tag tag-red">🔄 ${p}</span>`).join('')}</div></div>`:'<div style="margin-top:8px"><span class="tag tag-green">✅ Sin piezas a reemplazar</span></div>'}
+    </div>
+
+    ${isW ? workshopBreakdown : `
+    <div class="card">
+      <div class="card-title">🛠️ Proceso de reparación</div>
+      ${stepsHTML}
+    </div>`}
+
+    <div class="card">
+      <div class="card-title">💡 Consejos</div>
+      ${r.tips.map(t=>`<div class="breakdown-row"><span class="breakdown-lbl">→ ${t}</span></div>`).join('')}
+    </div>
+
+    <div style="background:rgba(255,179,0,.05);border:1px solid rgba(255,179,0,.15);border-radius:12px;padding:13px;font-size:11px;color:rgba(255,179,0,.7);margin-bottom:14px;line-height:1.6">
+      ⚠️ ${r.disclaimer} · Confianza del análisis: <strong>${r.confidenceLevel}</strong>
+    </div>
+  `;
+
+  document.getElementById('result-body').innerHTML = html;
+  navigate('results');
+
+  // Show PDF button for workshop
+  const pdfBtns = document.querySelectorAll('#screen-results .workshop-only');
+  pdfBtns.forEach(b=>b.style.display=isW?'flex':'none');
+
+  refreshUI();
+}
+
+function newAnalysis(){
+  state.files=[];
+  renderPreviews();
+  document.getElementById('analyze-btn').disabled=true;
+  document.getElementById('file-in').value='';
+  navigate('analyze');
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════
+function historyItemHTML(h){
+  const c = COUNTRIES[h.country]||COUNTRIES.ES;
+  const sevClass={low:'badge-low',medium:'badge-medium',high:'badge-high'}[h.result.severity]||'badge-medium';
+  return `<div class="history-item" onclick="viewHistoryItem('${h.id}')">
+    <div class="history-item-top">
+      <div class="history-item-title">${h.result.damageType||'Daño en '+h.vtype}</div>
+      <span class="badge ${sevClass}" style="font-size:9px">${h.result.severityLabel}</span>
+    </div>
+    <div class="history-item-desc">${h.result.damageDescription.slice(0,90)}...</div>
+    <div class="history-item-bottom">
+      <div class="history-item-cost">${fmtCur(h.result.minCostEUR,c)} – ${fmtCur(h.result.maxCostEUR,c)}</div>
+      <div style="font-size:11px;color:var(--muted)">${h.date} · ${c.flag} ${c.name}</div>
+    </div>
+  </div>`;
+}
+
+function renderHistory(){
+  const el = document.getElementById('history-list');
+  if(!state.history.length){
+    el.innerHTML='<div class="empty-state"><div class="emo">📋</div><p>Aún no tienes análisis guardados.<br>¡Empieza ahora!</p></div>';
+    return;
+  }
+  el.innerHTML = state.history.map(h=>historyItemHTML(h)).join('');
+}
+
+function viewHistoryItem(id){
+  const h = state.history.find(x=>x.id==id);
+  if(!h) return;
+  state.currentResult=h;
+  state.mode=h.mode;
+  showResults(h, COUNTRIES[h.country]||COUNTRIES.ES);
+}
+
+function clearHistory(){
+  if(!confirm('¿Borrar todo el historial?')) return;
+  state.history=[];
+  localStorage.removeItem('rai_history');
+  renderHistory();
+  refreshUI();
+}
+
+// ═══════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════
+function renderProfile(){
+  const u = state.user; if(!u) return;
+  const initials = (u.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('profile-avatar').textContent=initials;
+  document.getElementById('profile-name').textContent=u.name||'—';
+  document.getElementById('profile-email').textContent=u.email||'—';
+  const planLabels={free:'Plan Gratis',pro:'Plan Pro ⭐',workshop:'Plan Taller 🔧'};
+  document.getElementById('profile-plan-badge').textContent=planLabels[u.plan]||'Plan Gratis';
+  document.getElementById('p-stat-total').textContent=u.totalUses||0;
+  document.getElementById('p-stat-month').textContent=u.monthlyUses||0;
+  const uses=u.monthlyUses||0;
+  document.getElementById('p-usage-count').textContent=u.plan==='free'?(uses+'/3'):'∞';
+  document.getElementById('p-usage-fill').style.width=u.plan==='free'?Math.min(100,(uses/3)*100)+'%':'100%';
+  document.getElementById('cfg-name').value=u.name||'';
+  document.getElementById('cfg-email').value=u.email||'';
+}
+
+function saveProfile(){
+  const u=state.user; if(!u) return;
+  u.name=document.getElementById('cfg-name').value;
+  u.email=document.getElementById('cfg-email').value;
+  localStorage.setItem('rai_user',JSON.stringify(u));
+  refreshUI();
+  alert('✅ Cambios guardados');
+}
+
+// ═══════════════════════════════════════════════════════
+// PLANS & PAYMENT
+// ═══════════════════════════════════════════════════════
+function showPayModal(plan){
+  state.pendingPlan=plan;
+  const labels={pro:'Plan Pro — 4,99€/mes',workshop:'Plan Taller — 14,99€/mes'};
+  const descs={pro:'Análisis ilimitados, exportación PDF y funciones avanzadas.',workshop:'Todo el plan Pro más gestión de taller, informes con tu logo y soporte prioritario.'};
+  document.getElementById('modal-title').textContent='Activar '+labels[plan];
+  document.getElementById('modal-desc').textContent=descs[plan]||'';
+  document.getElementById('pay-modal').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('pay-modal').classList.remove('show');
+}
+
+function simulatePay(){
+  const links = {
+    pro: 'https://buy.stripe.com/4gM6oAcII8m0cYMeMg6wE00',
+    workshop: 'https://buy.stripe.com/7sYbIU244cCgbUI47C6wE01'
+  };
+  const plan = state.pendingPlan;
+  if(links[plan]){
+    closeModal();
+    window.open(links[plan], '_blank');
+  }
+}
+
+function closeSuccessModal(){
+  document.getElementById('success-modal').classList.remove('show');
+  navigate('home');
+}
+
+function formatCard(el){
+  el.value=el.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim();
+}
+
+// ═══════════════════════════════════════════════════════
+// SHARE & PDF
+// ═══════════════════════════════════════════════════════
+function shareResult(){
+  const r=state.currentResult;
+  if(!r) return;
+  const c=COUNTRIES[r.country]||COUNTRIES.ES;
+  const txt=`🔧 RepairAI — Estimación de daño\n\n${r.result.damageType}\nSeveridad: ${r.result.severityLabel}\nCoste: ${fmtCur(r.result.minCostEUR,c)} – ${fmtCur(r.result.maxCostEUR,c)}\n\n${r.result.damageDescription}`;
+  if(navigator.share){navigator.share({title:'Estimación RepairAI',text:txt});}
+  else{navigator.clipboard.writeText(txt).then(()=>alert('✅ Copiado al portapapeles'));}
+}
+
+function downloadPDF(){
+  alert('📄 En la versión de producción, aquí se generaría un PDF profesional con el logo de tu taller, los datos del cliente, el desglose técnico completo y la firma digital.\n\nEsta función requiere integración con una librería PDF en el servidor.');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+// Auto-login if saved session
+const savedUser = JSON.parse(localStorage.getItem('rai_user')||'null');
+if(savedUser){loginUser(savedUser);}
+
+// MULTILANGUAGE — 9 idiomas
+const LANGS9={
+  es:{flag:'🇪🇸',name:'Español',login:'Iniciar sesión',register:'Crear cuenta',demo:'👀 Ver demo sin registrarse',analyzing:'Analizando el daño...',sub:'La IA evalúa las imágenes.',err:'⚠️ Error. Comprueba tu conexión.',tip:'📸 Sube fotos desde varios ángulos para mayor precisión.',gm:'Buenos días',ga:'Buenas tardes',ge:'Buenas noches',ut:'Sube fotos del daño',us:'Toca aquí o arrastra las imágenes',ab:'🔍 Analizar daño con IA',h:'Inicio',an:'Analizar',hi:'Historial',ac:'Cuenta'},
+  en:{flag:'🇬🇧',name:'English',login:'Sign in',register:'Create account',demo:'👀 Try demo without signing up',analyzing:'Analyzing damage...',sub:'AI is evaluating images.',err:'⚠️ Error. Check your connection.',tip:'📸 Upload photos from different angles for better accuracy.',gm:'Good morning',ga:'Good afternoon',ge:'Good evening',ut:'Upload damage photos',us:'Tap here or drag images',ab:'🔍 Analyze damage with AI',h:'Home',an:'Analyze',hi:'History',ac:'Account'},
+  fr:{flag:'🇫🇷',name:'Français',login:'Se connecter',register:'Créer un compte',demo:'👀 Demo sans inscription',analyzing:'Analyse en cours...',sub:"L'IA évalue les images.",err:'⚠️ Erreur. Vérifiez votre connexion.',tip:'📸 Téléchargez des photos sous différents angles.',gm:'Bonjour',ga:'Bon après-midi',ge:'Bonsoir',ut:'Télécharger des photos',us:'Appuyez ici ou glissez',ab:'🔍 Analyser les dommages',h:'Accueil',an:'Analyser',hi:'Historique',ac:'Compte'},
+  de:{flag:'🇩🇪',name:'Deutsch',login:'Anmelden',register:'Konto erstellen',demo:'👀 Demo ohne Anmeldung',analyzing:'Wird analysiert...',sub:'KI bewertet die Bilder.',err:'⚠️ Fehler. Verbindung prüfen.',tip:'📸 Fotos aus verschiedenen Winkeln hochladen.',gm:'Guten Morgen',ga:'Guten Tag',ge:'Guten Abend',ut:'Fotos hochladen',us:'Hier tippen oder ziehen',ab:'🔍 Schaden analysieren',h:'Startseite',an:'Analysieren',hi:'Verlauf',ac:'Konto'},
+  pt:{flag:'🇵🇹',name:'Português',login:'Entrar',register:'Criar conta',demo:'👀 Demo sem registar',analyzing:'A analisar...',sub:'A IA avalia as imagens.',err:'⚠️ Erro. Verifique a ligação.',tip:'📸 Carregue fotos de vários ângulos.',gm:'Bom dia',ga:'Boa tarde',ge:'Boa noite',ut:'Carregar fotos do dano',us:'Toque aqui ou arraste',ab:'🔍 Analisar dano com IA',h:'Início',an:'Analisar',hi:'Histórico',ac:'Conta'},
+  it:{flag:'🇮🇹',name:'Italiano',login:'Accedi',register:'Crea account',demo:'👀 Demo senza registrarti',analyzing:'Analisi in corso...',sub:"L'IA valuta le immagini.",err:'⚠️ Errore. Controlla la connessione.',tip:'📸 Carica foto da angolazioni diverse.',gm:'Buongiorno',ga:'Buon pomeriggio',ge:'Buonasera',ut:'Carica foto del danno',us:'Tocca qui o trascina',ab:'🔍 Analizza danno con IA',h:'Home',an:'Analizza',hi:'Cronologia',ac:'Account'},
+  ro:{flag:'🇷🇴',name:'Română',login:'Autentificare',register:'Creare cont',demo:'👀 Demo fără înregistrare',analyzing:'Se analizează...',sub:'IA evaluează imaginile.',err:'⚠️ Eroare. Verificați conexiunea.',tip:'📸 Încărcați fotografii din mai multe unghiuri.',gm:'Bună dimineața',ga:'Bună ziua',ge:'Bună seara',ut:'Încărcați fotografii',us:'Atingeți sau trageți imaginile',ab:'🔍 Analizați cu IA',h:'Acasă',an:'Analizați',hi:'Istoric',ac:'Cont'},
+  zh:{flag:'🇨🇳',name:'中文',login:'登录',register:'创建账户',demo:'👀 无需注册体验演示',analyzing:'正在分析损坏...',sub:'AI正在评估图像。',err:'⚠️ 分析错误。请检查网络连接。',tip:'📸 从多个角度上传照片以获得更精确的结果。',gm:'早上好',ga:'下午好',ge:'晚上好',ut:'上传损坏照片',us:'点击此处或拖拽图片',ab:'🔍 用AI分析损坏',h:'首页',an:'分析',hi:'历史',ac:'账户'},
+  ja:{flag:'🇯🇵',name:'日本語',login:'ログイン',register:'アカウント作成',demo:'👀 登録なしでデモ',analyzing:'損傷を分析中...',sub:'AIが画像を評価しています。',err:'⚠️ 分析エラー。接続を確認してください。',tip:'📸 複数の角度から写真をアップロードしてください。',gm:'おはようございます',ga:'こんにちは',ge:'こんばんは',ut:'損傷の写真をアップロード',us:'ここをタップまたはドラッグ',ab:'🔍 AIで損傷を分析',h:'ホーム',an:'分析',hi:'履歴',ac:'アカウント'},
+};
+let curLang=localStorage.getItem('rai_lang')||(()=>{const n=navigator.language.toLowerCase();if(n.startsWith('fr'))return'fr';if(n.startsWith('de'))return'de';if(n.startsWith('pt'))return'pt';if(n.startsWith('it'))return'it';if(n.startsWith('ro'))return'ro';if(n.startsWith('zh'))return'zh';if(n.startsWith('ja'))return'ja';if(n.startsWith('en'))return'en';return'es';})();
+function tl(k){return(LANGS9[curLang]||LANGS9.es)[k]||(LANGS9.es)[k]||k;}
+function setLang9(l){curLang=l;localStorage.setItem('rai_lang',l);applyLang9();document.querySelectorAll('.lang-menu').forEach(m=>m.classList.remove('show'));}
+function applyLang9(){
+  const l=LANGS9[curLang]||LANGS9.es;
+  const tabs=document.querySelectorAll('.auth-tab');
+  if(tabs[0])tabs[0].textContent=l.login;
+  if(tabs[1])tabs[1].textContent=l.register;
+  const db=document.querySelector('#auth-login .btn-secondary');
+  if(db)db.textContent=l.demo;
+  const navL=document.querySelectorAll('.nav-item label');
+  const nk=[l.h,l.an,l.hi,l.ac];
+  navL.forEach((el,i)=>{if(nk[i])el.textContent=nk[i];});
+  const ut=document.querySelector('.upload-title');if(ut)ut.textContent=l.ut;
+  const us=document.querySelector('.upload-sub');if(us)us.textContent=l.us;
+  const ab=document.getElementById('analyze-btn');if(ab)ab.innerHTML=l.ab;
+  const lt=document.querySelector('.loading-title');if(lt)lt.textContent=l.analyzing;
+  const ls=document.querySelector('.loading-sub');if(ls)ls.textContent=l.sub;
+  const tb=document.querySelector('.tip-box');if(tb)tb.textContent=l.tip;
+  if(state.user){const hr=new Date().getHours();const gr=hr<12?l.gm:hr<18?l.ga:l.ge;const ge=document.getElementById('home-greeting');if(ge)ge.textContent=gr+' '+state.user.name.split(' ')[0]+' 👋';}
+  document.querySelectorAll('.lcf').forEach(el=>el.textContent=l.flag);
+  document.querySelectorAll('.lcn').forEach(el=>el.textContent=l.name);
+  document.querySelectorAll('.lang-opt').forEach(el=>el.classList.toggle('active',el.dataset.lang===curLang));
+}
+function buildLS(id){
+  const el=document.getElementById(id);if(!el)return;
+  const l=LANGS9[curLang]||LANGS9.es;
+  el.innerHTML=`<div class="lang-btn" onclick="this.querySelector('.lang-menu').classList.toggle('show')"><span class="lcf">${l.flag}</span><span class="lcn" style="font-size:11px">${l.name}</span><span style="font-size:9px">▾</span><div class="lang-menu">${Object.entries(LANGS9).map(([c,lg])=>`<div class="lang-opt${c===curLang?' active':''}" data-lang="${c}" onclick="event.stopPropagation();setLang9('${c}')">${lg.flag} ${lg.name}</div>`).join('')}</div></div>`;
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.lang-btn'))document.querySelectorAll('.lang-menu').forEach(m=>m.classList.remove('show'));});
+
+buildLS('lang-auth');buildLS('lang-main');setTimeout(applyLang9,300);
+</script>
+</body>
+</html>
