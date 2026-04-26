@@ -972,7 +972,7 @@ Responde ÚNICAMENTE con JSON válido sin texto extra:
 
 IMPORTANTE: minCostEUR y maxCostEUR deben estar dentro de los rangos reales de la tabla. Si el daño parece leve (arañazo, golpe pequeño), el máximo no debe superar 400€. Adapta los precios según el país seleccionado multiplicando por el factor de coste de vida local. España = base 1.0, México = 0.6, Argentina = 0.4, EE.UU. = 1.3, Alemania = 1.2, Reino Unido = 1.15.`;
 
-    const resp = await fetch('/api/analyze',{
+    const resp = await await fetch('https://repairai-proxy.jonamp888.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
