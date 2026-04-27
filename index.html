@@ -856,7 +856,7 @@ async function runAnalysis(){
 
     const imageBlocks = await Promise.all(state.files.map(async f=>({
       type:'image',
-      source:{type:'base64',media_type:f.type||'image/jpeg',data:await toB64(f)}
+      source:{type:'base64',media_type:f.type,data:await toB64(f)}
     })));
 
     const prompt = `Eres un perito experto en daños de carrocería de vehículos con 20 años de experiencia. Analiza ${state.files.length>1?'estas '+state.files.length+' fotos':'esta foto'} de daños en un "${state.vtype}".
@@ -892,7 +892,7 @@ Los precios deben reflejar la realidad del mercado de ${country.name} (mano de o
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-3-5-sonnet-20241022',
+        model:'claude-haiku-4-5-20251001',
         max_tokens:1000,
         messages:[{role:'user',content:[...imageBlocks,{type:'text',text:prompt}]}]
       })
@@ -900,7 +900,7 @@ Los precios deben reflejar la realidad del mercado de ${country.name} (mano de o
     clearInterval(stepIntvl);
     steps.forEach(s=>{document.getElementById(s).classList.remove('active');document.getElementById(s).classList.add('done');});
 
-    const data = await resp.json();
+    const data = await resp.json(); console.log("WORKER RESPONSE:", JSON.stringify(data).slice(0,200));
     const txt = data.content.map(i=>i.text||'').join('');
     const clean = txt.replace(/```json|```/g,'').trim();
     const result = JSON.parse(clean);
