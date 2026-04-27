@@ -888,9 +888,9 @@ Responde ÚNICAMENTE con JSON válido sin texto extra:
 
 Los precios deben reflejar la realidad del mercado de ${country.name} (mano de obra, piezas originales vs genéricas, pintura de la zona afectada). minCostEUR y maxCostEUR en euros base.`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    const resp = await fetch('https://repairai-proxy.jonamp888.workers.dev',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':'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','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-3-5-sonnet-20241022',
         max_tokens:1000,
